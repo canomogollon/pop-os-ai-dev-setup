@@ -3,7 +3,7 @@
 > A 2026 evolution of [erik1066/pop-os-setup](https://github.com/erik1066/pop-os-setup),
 > updated for Pop!_OS 24.04 LTS with COSMIC Desktop.
 > Focused on AI-assisted software engineering workflows.
-> 
+>
 > Created with human-AI collaboration — see [Credits](#credits).
 
 ## Who is this for?
@@ -11,13 +11,123 @@
 Software engineers who want a professional, productive, AI-first development
 environment on Pop!_OS 24.04 LTS. Not a beginner guide — assumes clean install.
 
-## What's new vs the original guide?
+## Quick Start: Automated Installation
 
-- Pop!_OS 24.04 LTS with COSMIC Desktop (Wayland, Rust-based)
-- AI tools as first-class citizens: OpenCode, Claude CLI, Gemini CLI
-- Modern toolchain: Node 20 LTS + PNPM 9, Biome, uv (Python)
-- Cursor IDE alongside VS Code
-- Optional: local AI models via Ollama (hardware-gated)
+### Option A: Master Installer (Recommended)
+
+```bash
+# Clone the repo
+git clone https://github.com/elkin500/pop-os-ai-dev-setup
+cd pop-os-ai-dev-setup
+
+# Run diagnostic first to check current state
+bash scripts/diagnostic.sh
+
+# Run master installer (interactive, guides through all steps)
+bash scripts/install-all.sh
+```
+
+### Option B: Step-by-Step Scripts
+
+```bash
+# Phase 1: Base system + Shell (REQUIRES REBOOT!)
+bash scripts/install-base.sh
+# ⚠️ REBOOT NOW before continuing!
+
+# Phase 2: Node.js + PNPM (after ZSH is active)
+bash scripts/install-node.sh
+
+# Phase 3: OpenCode + API Keys
+bash scripts/install-opencode.sh
+# Edit ~/.config/ai-keys/exports.sh with your keys
+source ~/.zshrc
+
+# Phase 4: Tools (IDEs, Git, GH CLI, Biome)
+bash scripts/install-tools.sh
+
+# Phase 5: Docker + Databases
+bash scripts/install-docker.sh
+# Logout/login for docker group
+
+# Phase 6: Python + uv
+bash scripts/install-python.sh
+
+# Phase 7: Optional (Ollama, Security, Apps)
+bash scripts/install-optional.sh
+```
+
+---
+
+## Installation Order (Critical!)
+
+> **⚠️ The order matters!** Dependencies must be satisfied before each step.
+
+```mermaid
+graph TD
+    A[1. OS Update<br/>+ Inotify] --> B[2. ZSH + Starship<br/>+ Fonts]
+    B --> C[🔴 REBOOT<br/>CRITICAL!]
+    C --> D[3. Node.js 20 LTS<br/>+ PNPM 9]
+    D --> E[4. OpenCode CLI<br/>+ API Keys]
+    E --> F[5. VS Code + Cursor<br/>+ Extensions]
+    F --> G[6. Git + GH CLI<br/>+ AI CLIs]
+    G --> H[7. Biome Linter]
+    H --> I[8. Docker + DBs<br/>Logout required]
+    I --> J[9. Python + uv]
+    J --> K[10. Optional: Ollama<br/>Hardware gated]
+```
+
+### Why this order?
+
+| Step | Depends On | Why |
+|------|------------|-----|
+| OpenCode (4) | Node.js (3) | `npm install -g` requires Node |
+| API Keys (4) | ZSH active (2) | Keys loaded from ~/.zshrc |
+| NVM (3) | ZSH + Reboot (2) | NVM needs shell config loaded |
+| Docker group (8) | Logout/login | Group membership needs session refresh |
+
+---
+
+## Installation Checklist
+
+Use this checklist to track progress:
+
+### Phase 1: Base System
+- [ ] 1. OS Update (`sudo apt full-upgrade`)
+- [ ] 2. Inotify max watches (524288)
+- [ ] 3. ZSH + Oh My Zsh + Starship
+- [ ] 4. Nerd Fonts (JetBrainsMono)
+- [ ] 5. Kitty terminal (optional)
+- [ ] 6. COSMIC Desktop config
+- [ ] 🔴 **REBOOT NOW** — Shell change requires logout!
+
+### Phase 2: Runtime + AI Tools
+- [ ] 10. Node.js 20 LTS (via NVM)
+- [ ] PNPM 9
+- [ ] 9. OpenCode CLI
+- [ ] API keys configured (`~/.config/ai-keys/exports.sh`)
+- [ ] OpenCode config (`~/.config/opencode/config.json`)
+
+### Phase 3: Editors + Tools
+- [ ] 7. VS Code + AI extensions
+- [ ] 8. Cursor IDE (AppImage)
+- [ ] 11. Git + SSH keys
+- [ ] 12. GitHub CLI + Copilot
+- [ ] 13. Claude CLI + Gemini CLI
+- [ ] 14. Biome (linter/formatter)
+
+### Phase 4: Infrastructure
+- [ ] 15. Docker + docker group
+- [ ] 16. PostgreSQL + Redis (Docker Compose)
+- [ ] Logout/login for docker group
+- [ ] 17. Python 3 + uv
+
+### Phase 5: Optional
+- [ ] 18. Ollama (if hardware supports)
+- [ ] 19. UFW firewall + Bitwarden CLI
+- [ ] 20. Apps: Slack, Bruno, Obsidian
+- [ ] 21. Runtimes: Go, Rust, Bun (if needed)
+
+---
 
 ## ⚠️ Hardware Note: NVIDIA Pascal (GTX 10xx)
 
@@ -28,24 +138,28 @@ https://github.com/pop-os/pop/issues
 
 ---
 
-## 1. Update the OS
+## Detailed Steps
+
+<details>
+<summary><b>1. Update the OS</b></summary>
 
 **current as of 2026-05**
 
 Primer paso post-instalación. Pop!_OS 24.04 usa `apt` como gestor base
 igual que versiones anteriores. El comando `full-upgrade` es preferido
-sobre `upgrade` para manejar correctamente dependencias.
+over `upgrade` para manejar correctamente dependencias.
 
 ```bash
 sudo apt update && sudo apt full-upgrade -y
-sudo apt install -y   build-essential   curl   wget   git   zip unzip   htop   gnupg   ca-certificates   lsb-release   apt-transport-https   software-properties-common
+sudo apt install -y build-essential curl wget git zip unzip htop gnupg ca-certificates lsb-release apt-transport-https software-properties-common
 ```
 
 Run `lsb_release -a` and look for `Description: Pop!_OS 24.04 LTS` to verify.
 
----
+</details>
 
-## 2. Increase the inotify watch count
+<details>
+<summary><b>2. Increase the inotify watch count</b></summary>
 
 **current as of 2026-05** | Crítico para dev con Node/Vite/esbuild
 
@@ -60,9 +174,10 @@ sudo sysctl -p --system
 
 Run `cat /proc/sys/fs/inotify/max_user_watches` and look for `524288`.
 
----
+</details>
 
-## 3. Shell: ZSH + Starship Prompt
+<details>
+<summary><b>3. Shell: ZSH + Starship Prompt</b></summary>
 
 **current as of 2026-05** | Reemplaza el setup ZSH + tema del original
 
@@ -71,50 +186,53 @@ es más rápido, escrito en Rust, y muestra contexto de Node, Git, y
 directorio activo sin configuración extra. Ideal para flujos AI-dev.
 
 ```bash
-# Instalar ZSH
+# Install ZSH
 sudo apt install -y zsh
 
-# Establecer como shell por defecto
+# Set as default shell
 chsh -s $(which zsh)
 
-# Instalar Oh-My-ZSH (gestión de plugins)
+# Install Oh-My-ZSH
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 
-# Instalar Starship prompt
+# Install Starship prompt
 curl -sS https://starship.rs/install.sh | sh
 
-# Añadir Starship al final de ~/.zshrc
+# Add Starship to ~/.zshrc
 echo 'eval "$(starship init zsh)"' >> ~/.zshrc
 
-# Instalar plugins útiles
+# Install useful plugins
 git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
 git clone https://github.com/zsh-users/zsh-syntax-highlighting ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
 ```
 
-Editar `~/.zshrc` y actualizar la línea de plugins:
+Edit `~/.zshrc` and update plugins line:
 
 ```
 plugins=(git zsh-autosuggestions zsh-syntax-highlighting node)
 ```
 
 Run `starship --version` and look for `starship 1.x.x` to verify.
-Reiniciar terminal y verificar prompt con colores y contexto Git activo.
+Restart terminal and verify prompt with colors and Git context active.
 
----
+> **⚠️ REBOOT NOW after this step!** The `chsh` command requires logout/login to activate ZSH.
 
-## 4. Terminal: Kitty (alternativa GPU-accelerated)
+</details>
+
+<details>
+<summary><b>4. Terminal: Kitty (GPU-accelerated alternative)</b></summary>
 
 **current as of 2026-05**
 
-COSMIC Terminal viene preinstalado en 24.04 y es la opción por defecto.
-Kitty es una alternativa GPU-accelerated recomendada para outputs largos
-de herramientas AI (streams de Claude/Gemini en CLI).
+COSMIC Terminal comes preinstalled in 24.04 and is the default option.
+Kitty is a GPU-accelerated alternative recommended for long outputs
+from AI tools (Claude/Gemini CLI streams).
 
 ```bash
 sudo apt install -y kitty
 ```
 
-Para establecer Kitty como terminal por defecto:
+To set Kitty as default terminal:
 
 ```bash
 sudo update-alternatives --install /usr/bin/x-terminal-emulator x-terminal-emulator $(which kitty) 50
@@ -123,71 +241,70 @@ sudo update-alternatives --config x-terminal-emulator
 
 Run `kitty --version` and look for `kitty 0.3x.x` to verify.
 
-> Nota: COSMIC Terminal es excelente para uso diario. Kitty es opcional
-> pero superior para scrollback de outputs largos de modelos AI.
+> Note: COSMIC Terminal is excellent for daily use. Kitty is optional
+> but superior for long scrollback of AI model outputs.
 
----
+</details>
 
-## 5. Nerd Fonts
+<details>
+<summary><b>5. Nerd Fonts</b></summary>
 
-**current as of 2026-05** | Requerido para Starship + íconos en editores AI
+**current as of 2026-05** | Required for Starship + icons in AI editors
 
-JetBrains Mono Nerd Font es el estándar para IDEs con integración AI
-en 2026. Requerido para que Starship y VS Code/Cursor muestren íconos
-correctamente.
+JetBrains Mono Nerd Font is the standard for IDEs with AI integration
+in 2026. Required for Starship and VS Code/Cursor to show icons
+correctly.
 
 ```bash
-# Crear directorio de fuentes local
+# Create local fonts directory
 mkdir -p ~/.local/share/fonts
 
-# Descargar JetBrains Mono Nerd Font
-wget -O /tmp/JetBrainsMono.zip   https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip
+# Download JetBrains Mono Nerd Font
+wget -O /tmp/JetBrainsMono.zip https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip
 
-# Instalar
+# Install
 unzip /tmp/JetBrainsMono.zip -d ~/.local/share/fonts/JetBrainsMono
 fc-cache -fv
 ```
 
-Run `fc-list | grep "JetBrains"` and look for at least one entry with `JetBrainsMono` to verify.
+Run `fc-list | grep "JetBrains"` and look for at least one `JetBrainsMono` entry.
 
----
+</details>
 
-## 6. COSMIC Desktop: Apariencia y Configuración Profesional
+<details>
+<summary><b>6. COSMIC Desktop: Appearance & Professional Config</b></summary>
 
-**current as of 2026-05** | [NUEVO] Reemplaza sección GNOME Tweaks + Extensions
+**current as of 2026-05** | [NEW] Replaces GNOME Tweaks + Extensions section
 
-COSMIC Desktop (Pop!_OS 24.04) es Wayland-only con tiling de ventanas
-nativo (`Super + G`). No requiere extensiones de GNOME. La personalización
-se hace desde **COSMIC Settings → Desktop → Appearance**.
+COSMIC Desktop (Pop!_OS 24.04) is Wayland-only with native window tiling
+(`Super + G`). No GNOME extensions needed. Customization done from
+**COSMIC Settings → Desktop → Appearance**.
 
-### Tiling nativo (reemplaza Pop Shell)
+### Native Tiling (replaces Pop Shell)
 
-- `Super + G` — activar/desactivar tiling en ventana actual
-- `Super + Dirección` — mover foco entre ventanas
-- `Super + Shift + Dirección` — mover ventana
-- `Super + Enter` — nueva ventana en split
+- `Super + G` — toggle tiling for current window
+- `Super + Direction` — move focus between windows
+- `Super + Shift + Direction` — move window
+- `Super + Enter` — new window in split
 
-### Instalar tema Catppuccin (GTK)
+### Catppuccin GTK Theme
 
-> Verificar release actual en: https://github.com/catppuccin/gtk/releases
+> **⚠️ Note: Catppuccin GTK is ARCHIVED** (Jun 2, 2024)
+> The repository is no longer maintained but releases are still available.
+> See: https://github.com/catppuccin/gtk
 
 ```bash
-# Crear directorios de temas
+# Create theme directories
 mkdir -p ~/.local/share/themes
 mkdir -p ~/.local/share/icons
 
-# Descargar la versión más reciente disponible:
-CATPPUCCIN_VERSION=$(curl -s https://api.github.com/repos/catppuccin/gtk/releases/latest | grep tag_name | cut -d'"' -f4)
+# Download latest available release (v1.0.3)
 wget -O /tmp/catppuccin-gtk.zip \
-  "https://github.com/catppuccin/gtk/releases/download/${CATPPUCCIN_VERSION}/catppuccin-mocha-mauve-standard+default.zip"
+  "https://github.com/catppuccin/gtk/releases/download/v1.0.3/catppuccin-mocha-mauve-standard+default.zip"
 unzip /tmp/catppuccin-gtk.zip -d ~/.local/share/themes/
 ```
 
-### Instalar íconos Papirus
-
-> Verificar disponibilidad del PPA en Ubuntu 24.04:
-> https://launchpad.net/~papirus/+archive/ubuntu/papirus
-> Si el PPA no está disponible, usar: sudo snap install papirus-icon-theme
+### Papirus Icons
 
 ```bash
 sudo add-apt-repository -y ppa:papirus/papirus
@@ -195,116 +312,73 @@ sudo apt update
 sudo apt install -y papirus-icon-theme
 ```
 
-Aplicar desde: **COSMIC Settings → Desktop → Appearance → Icons**
+Apply from: **COSMIC Settings → Desktop → Appearance → Icons**
 
-> Nota: Gnome Tweaks NO existe en COSMIC. Toda la personalización es
-> desde COSMIC Settings o copiando archivos a ~/.local/share/themes.
+> Note: GNOME Tweaks does NOT exist in COSMIC. All customization is
+> from COSMIC Settings or copying files to ~/.local/share/themes.
 
----
+</details>
 
-## 7. Visual Studio Code
+<details>
+<summary><b>10. Node.js 20 LTS + PNPM 9</b> — MUST be installed BEFORE OpenCode!</summary>
 
-**current as of 2026-05**
+**current as of 2026-05** | Production-validated versions
 
-Instalar desde el repositorio oficial de Microsoft para recibir
-actualizaciones automáticas.
+Node 20 LTS via NVM to manage multiple versions. PNPM 9 as package manager:
+faster than npm, better monorepo handling, growing standard in modern
+TypeScript projects.
 
-```bash
-wget -qO- https://packages.microsoft.com/keys/microsoft.asc |   gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/microsoft.gpg > /dev/null
-
-echo "deb [arch=amd64] https://packages.microsoft.com/repos/code stable main" |   sudo tee /etc/apt/sources.list.d/vscode.list
-
-sudo apt update && sudo apt install -y code
-```
-
-### Extensiones AI obligatorias (instalar vía CLI)
+> **⚠️ This step MUST run AFTER reboot** (when ZSH is active)
 
 ```bash
-code --install-extension GitHub.copilot
-code --install-extension GitHub.copilot-chat
-code --install-extension Continue.continue
-code --install-extension biomejs.biome
-code --install-extension usernamehw.errorlens
-code --install-extension eamodio.gitlens
-code --install-extension humao.rest-client
+# Install NVM
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
+
+# Load NVM without restarting terminal
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+# Install Node 20 LTS
+nvm install 20
+nvm use 20
+nvm alias default 20
+
+# Install PNPM 9
+npm install -g pnpm@9
+
+# Configure PNPM
+pnpm setup
 ```
 
-### Settings mínimos recomendados (~/.config/Code/User/settings.json)
+Run `node --version` and look for `v20.x.x` to verify.
+Run `pnpm --version` and look for `9.x.x` to verify.
 
-```json
-{
-  "editor.fontFamily": "'JetBrainsMono Nerd Font', monospace",
-  "editor.fontSize": 14,
-  "editor.fontLigatures": true,
-  "editor.formatOnSave": true,
-  "editor.defaultFormatter": "biomejs.biome",
-  "terminal.integrated.fontFamily": "'JetBrainsMono Nerd Font Mono'",
-  "editor.inlineSuggest.enabled": true,
-  "github.copilot.enable": { "*": true }
-}
-```
+</details>
 
-Run `code --version` and look for `1.9x.x` (or newer) to verify.
+<details>
+<summary><b>9. OpenCode CLI</b></summary>
 
----
+**current as of 2026-05** | [NEW] AI code agent in terminal
 
-## 8. Cursor IDE
+OpenCode is a coding agent that runs in terminal, similar to
+Claude Code or Gemini CLI but configurable with multiple providers
+and MCPs (Model Context Protocol). Essential for AI-first workflows.
 
-**current as of 2026-05** | [NUEVO] IDE AI-first, fork de VS Code
-
-Cursor es el IDE con IA más completo en 2026: IA nativa integrada
-al editor, no como extensión. Permite chat con el codebase completo,
-edición multi-archivo guiada por IA, y soporte de MCPs.
+> **⚠️ Requires Node.js first!** Run step 10 before this.
 
 ```bash
-# Descargar AppImage oficial
-mkdir -p ~/Applications
-wget -O ~/Applications/cursor.AppImage \
-  "https://downloader.cursor.sh/linux/appImage/x64"
-chmod +x ~/Applications/cursor.AppImage
-
-# Crear launcher .desktop para COSMIC/aplicaciones
-cat > ~/.local/share/applications/cursor.desktop << 'EOF'
-[Desktop Entry]
-Name=Cursor
-Exec=/home/$USER/Applications/cursor.AppImage --no-sandbox
-Icon=cursor
-Type=Application
-Categories=Development;TextEditor;
-EOF
-
-update-desktop-database ~/.local/share/applications/
-```
-
-> Cursor no tiene paquete .deb oficial. El AppImage es el método
-> de instalación en Linux. El launcher .desktop lo integra al COSMIC Launcher.
-
-Run `~/Applications/cursor.AppImage --version` and look for a version string to verify.
-
----
-
-## 9. OpenCode CLI
-
-**current as of 2026-05** | [NUEVO] Agente de código AI en terminal
-
-OpenCode es un agente de codificación que corre en terminal, similar
-a Claude Code o Gemini CLI pero configurable con múltiples providers
-y MCPs (Model Context Protocol). Esencial para flujos AI-first.
-
-```bash
-# Verificar nombre correcto del paquete antes de instalar:
+# Verify package name before installing:
 npm info opencode
 
-# Instalación (usar el nombre confirmado por npm info):
+# Installation:
 npm install -g opencode
 ```
 
-> El nombre del paquete puede variar. Verificar en https://opencode.ai/docs
-> la instrucción de instalación más reciente.
+> Package name may vary. Check https://opencode.ai/docs for latest instructions.
 
-### Configuración base de providers
+### Provider Configuration
 
-Crear `~/.config/opencode/config.json`:
+Create `~/.config/opencode/config.json`:
 
 ```json
 {
@@ -321,14 +395,14 @@ Crear `~/.config/opencode/config.json`:
 }
 ```
 
-### Gestión segura de API keys
+### Secure API Key Management
 
 ```bash
-# Crear directorio seguro para keys (fuera de cualquier repo)
+# Create secure keys directory (outside any repo)
 mkdir -p ~/.config/ai-keys
 chmod 700 ~/.config/ai-keys
 
-# Crear archivo de variables
+# Create variables file
 cat > ~/.config/ai-keys/exports.sh << 'EOF'
 export ANTHROPIC_API_KEY="sk-ant-..."
 export GOOGLE_AI_API_KEY="AIza..."
@@ -337,128 +411,172 @@ EOF
 
 chmod 600 ~/.config/ai-keys/exports.sh
 
-# Cargar automáticamente en cada sesión
+# Auto-load in each session
 echo 'source ~/.config/ai-keys/exports.sh' >> ~/.zshrc
-```
-
-### AGENTS.md base para nuevos proyectos
-
-En la raíz de cada proyecto nuevo, crear `AGENTS.md`:
-
-```markdown
-# AGENTS
-
-## Stack
-[Describir stack del proyecto]
-
-## Reglas de código
-- TypeScript strict, sin `any`
-- [Reglas específicas del proyecto]
-
-## Comandos frecuentes
-[Comandos de build, test, dev]
 ```
 
 Run `opencode --version` and look for a version number to verify.
 
----
+</details>
 
-## 10. Node.js 20 LTS + PNPM 9
-
-**current as of 2026-05** | Versiones validadas en producción
-
-Node 20 LTS vía NVM para poder manejar múltiples versiones. PNPM 9
-como package manager: más rápido que npm, mejor manejo de monorepos,
-y estándar creciente en proyectos TypeScript modernos.
-
-```bash
-# Instalar NVM
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
-
-# Cargar NVM en la sesión actual sin reiniciar terminal
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-
-# Instalar Node 20 LTS
-nvm install 20
-nvm use 20
-nvm alias default 20
-
-# Instalar PNPM 9
-npm install -g pnpm@9
-```
-
-Run `node --version` and look for `v20.x.x` to verify.
-Run `pnpm --version` and look for `9.x.x` to verify.
-
----
-
-## 11. Git Configuration
+<details>
+<summary><b>7. Visual Studio Code</b></summary>
 
 **current as of 2026-05**
 
-Configuración global de Git con firma GPG y SSH keys. La firma de
-commits es especialmente importante en proyectos con colaboración
-humano-IA para mantener trazabilidad de autoría.
+Install from official Microsoft repository for automatic updates.
 
 ```bash
-git config --global user.name "Tu Nombre"
-git config --global user.email "tu@email.com"
+wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/microsoft.gpg > /dev/null
+
+echo "deb [arch=amd64] https://packages.microsoft.com/repos/code stable main" | sudo tee /etc/apt/sources.list.d/vscode.list
+
+sudo apt update && sudo apt install -y code
+```
+
+### Required AI Extensions (CLI install)
+
+```bash
+code --install-extension GitHub.copilot
+code --install-extension GitHub.copilot-chat
+code --install-extension Continue.continue
+code --install-extension biomejs.biome
+code --install-extension usernamehw.errorlens
+code --install-extension eamodio.gitlens
+code --install-extension humao.rest-client
+```
+
+### Minimal Recommended Settings (~/.config/Code/User/settings.json)
+
+```json
+{
+  "editor.fontFamily": "'JetBrainsMono Nerd Font', monospace",
+  "editor.fontSize": 14,
+  "editor.fontLigatures": true,
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "biomejs.biome",
+  "terminal.integrated.fontFamily": "'JetBrainsMono Nerd Font Mono'",
+  "editor.inlineSuggest.enabled": true,
+  "github.copilot.enable": { "*": true }
+}
+```
+
+Run `code --version` and look for `1.9x.x` (or newer) to verify.
+
+</details>
+
+<details>
+<summary><b>8. Cursor IDE</b></summary>
+
+**current as of 2026-05** | [NEW] AI-first IDE, VS Code fork
+
+Cursor is the most complete AI IDE in 2026: native AI integrated
+into editor, not as extension. Allows chat with full codebase,
+multi-file AI-guided editing, and MCP support.
+
+```bash
+# Download official AppImage
+mkdir -p ~/Applications
+wget -O ~/Applications/cursor.AppImage "https://downloader.cursor.sh/linux/appImage/x64"
+chmod +x ~/Applications/cursor.AppImage
+
+# Create .desktop launcher for COSMIC
+cat > ~/.local/share/applications/cursor.desktop << 'EOF'
+[Desktop Entry]
+Name=Cursor
+Exec=/home/$USER/Applications/cursor.AppImage --no-sandbox
+Icon=cursor
+Type=Application
+Categories=Development;TextEditor;
+EOF
+
+update-desktop-database ~/.local/share/applications/
+```
+
+> Cursor has no official .deb package. AppImage is the installation
+> method on Linux. The .desktop launcher integrates it to COSMIC Launcher.
+
+Run `~/Applications/cursor.AppImage --version` and look for a version string.
+
+</details>
+
+<details>
+<summary><b>11. Git Configuration</b></summary>
+
+**current as of 2026-05**
+
+Global Git config with GPG signing and SSH keys. Commit signing is
+especially important in human-AI collaboration projects to maintain
+authorship traceability.
+
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "your@email.com"
 git config --global core.editor "code --wait"
 git config --global init.defaultBranch main
 git config --global pull.rebase false
 
-# Generar SSH key (Ed25519 — algoritmo recomendado 2026)
-ssh-keygen -t ed25519 -C "tu@email.com"
+# Generate SSH key (Ed25519 — recommended algorithm 2026)
+ssh-keygen -t ed25519 -C "your@email.com"
 
-# Iniciar ssh-agent y agregar key
+# Start ssh-agent and add key
 eval "$(ssh-agent -s)"
 ssh-add ~/.ssh/id_ed25519
 
-# Copiar clave pública para agregar a GitHub
+# Copy public key to add to GitHub
 cat ~/.ssh/id_ed25519.pub
 ```
 
 Run `git config --list` and look for `user.name` and `user.email` to verify.
 
----
+</details>
 
-## 12. GitHub CLI
+<details>
+<summary><b>12. GitHub CLI</b></summary>
 
 **current as of 2026-05**
 
-`gh` CLI para gestión de repos, PRs, y acceso a modelos AI desde terminal.
-`gh copilot` permite hacer preguntas y sugerencias de comandos directamente.
+`gh` CLI for repo management, PRs, and AI model access from terminal.
+`gh copilot` allows asking questions and command suggestions directly.
 
 ```bash
-# Agregar repositorio oficial de GitHub CLI
-(type -p wget >/dev/null || (sudo apt update && sudo apt-get install wget -y))   && sudo mkdir -p -m 755 /etc/apt/keyrings   && out=$(mktemp) && wget -nv -O$out https://cli.github.com/packages/githubcli-archive-keyring.gpg   && cat $out | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null   && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg   && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main"   | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null   && sudo apt update   && sudo apt install gh -y
+# Add official GitHub CLI repository
+(type -p wget >/dev/null || (sudo apt update && sudo apt-get install wget -y)) \
+  && sudo mkdir -p -m 755 /etc/apt/keyrings \
+  && out=$(mktemp) && wget -nv -O$out https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+  && cat $out | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
+  && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+  && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+  | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+  && sudo apt update \
+  && sudo apt install gh -y
 
-# Autenticar
+# Authenticate
 gh auth login
 
-# Instalar extensión Copilot CLI
+# Install Copilot CLI extension
 gh extension install github/gh-copilot
 ```
 
-Comandos útiles:
+Useful commands:
 
 ```bash
-gh copilot suggest "cómo listar puertos en uso"   # sugerencia de comando
-gh copilot explain "sudo ss -tulnp"                # explicar un comando
+gh copilot suggest "how to list ports in use"  # command suggestion
+gh copilot explain "sudo ss -tulnp"             # explain a command
 ```
 
 Run `gh --version` and look for `gh version 2.x.x` to verify.
 
----
+</details>
 
-## 13. AI Cloud CLI Tools
+<details>
+<summary><b>13. AI Cloud CLI Tools</b></summary>
 
-**current as of 2026-05** | [NUEVO] Herramientas AI cloud obligatorias
+**current as of 2026-05** | [NEW] Mandatory AI cloud tools
 
-En 2026, estos tres CLIs son parte del toolkit estándar de un
-ingeniero AI-assisted. Se complementan: Claude para código complejo,
-Gemini para contextos largos, GitHub Copilot para flujo en terminal.
+In 2026, these three CLIs are part of the standard toolkit for
+AI-assisted engineers. They complement each other: Claude for complex code,
+Gemini for long contexts, GitHub Copilot for terminal workflow.
 
 ```bash
 # Claude CLI (Anthropic)
@@ -467,33 +585,33 @@ npm install -g @anthropic-ai/claude-code
 # Gemini CLI (Google)
 npm install -g @google/gemini-cli
 
-# Verificar API keys cargadas (configuradas en sección OpenCode)
+# Verify API keys loaded (configured in OpenCode section)
 echo "ANTHROPIC: ${ANTHROPIC_API_KEY:0:10}..."
 echo "GOOGLE: ${GOOGLE_AI_API_KEY:0:10}..."
 ```
 
-Run `claude --version` and look for a version number to verify.
-Run `gemini --version` and look for a version number to verify.
+Run `claude --version` and `gemini --version` to verify.
 
----
+</details>
 
-## 14. Biome — Linter y Formatter Unificado
+<details>
+<summary><b>14. Biome — Unified Linter and Formatter</b></summary>
 
-**current as of 2026-05** | [NUEVO] Reemplaza ESLint + Prettier
+**current as of 2026-05** | [NEW] Replaces ESLint + Prettier
 
-Biome es el linter/formatter todo-en-uno del ecosistema TypeScript 2026.
-10-20x más rápido que ESLint+Prettier, escrito en Rust. Un solo archivo
-de configuración para todo el proyecto.
+Biome is the all-in-one linter/formatter for TypeScript ecosystem 2026.
+10-20x faster than ESLint+Prettier, written in Rust. Single config file
+for entire project.
 
 ```bash
-# Instalar globalmente
+# Install globally
 npm install -g @biomejs/biome
 
-# Verificar
+# Verify
 biome --version
 ```
 
-### Configuración base (biome.json en raíz del proyecto)
+### Base Config (biome.json in project root)
 
 ```json
 {
@@ -513,29 +631,29 @@ biome --version
 
 Run `biome --version` and look for `Version: 1.x.x` to verify.
 
----
+</details>
 
-## 15. Docker
+<details>
+<summary><b>15. Docker</b></summary>
 
 **current as of 2026-05**
 
-Docker para contenedores de desarrollo y bases de datos locales.
-Instalación desde el repositorio oficial de Docker (no el paquete
-`docker.io` de apt que viene desactualizado).
+Docker for development containers and local databases.
+Install from official Docker repository (not the outdated `docker.io` apt package).
 
 ```bash
-# Remover versiones anteriores si existen
+# Remove old versions if present
 sudo apt remove -y docker docker-engine docker.io containerd runc 2>/dev/null || true
 
-# Agregar repositorio oficial Docker
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg |   sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/docker.gpg
+# Add official Docker repository
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/docker.gpg
 
-echo "deb [arch=amd64] https://download.docker.com/linux/ubuntu   $(lsb_release -cs) stable" |   sudo tee /etc/apt/sources.list.d/docker.list
+echo "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list
 
 sudo apt update
 sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 
-# Agregar usuario al grupo docker (sin sudo)
+# Add user to docker group (no sudo)
 sudo usermod -aG docker $USER
 newgrp docker
 ```
@@ -543,17 +661,19 @@ newgrp docker
 Run `docker --version` and look for `Docker version 27.x` or newer.
 Run `docker compose version` and look for `Docker Compose version v2.x` to verify.
 
----
+> **⚠️ Logout/login required** for docker group membership to take effect.
 
-## 16. Databases in Docker (PostgreSQL + Redis)
+</details>
+
+<details>
+<summary><b>16. Databases in Docker (PostgreSQL + Redis)</b></summary>
 
 **current as of 2026-05**
 
-Bases de datos vía Docker Compose para desarrollo local. Este patrón
-evita instalar PostgreSQL directamente en el sistema y permite múltiples
-versiones por proyecto.
+Databases via Docker Compose for local development. This pattern
+avoids installing PostgreSQL directly and allows multiple versions per project.
 
-Crear `~/dev/docker-compose.dev.yml`:
+Create `~/dev/docker-compose.dev.yml`:
 
 ```yaml
 services:
@@ -582,77 +702,79 @@ volumes:
 ```
 
 ```bash
-# Levantar servicios de desarrollo
+# Start development services
 docker compose -f ~/dev/docker-compose.dev.yml up -d
 
-# Verificar
+# Verify
 docker compose -f ~/dev/docker-compose.dev.yml ps
 ```
 
-Run `docker compose -f ~/dev/docker-compose.dev.yml ps` and look for both services in `running` state to verify.
+Run `docker compose -f ~/dev/docker-compose.dev.yml ps` and look for both services in `running` state.
 
----
+</details>
 
-## 17. Python 3 + uv
+<details>
+<summary><b>17. Python 3 + uv</b></summary>
 
-**current as of 2026-05** | [NUEVO] uv reemplaza pip/venv
+**current as of 2026-05** | [NEW] uv replaces pip/venv
 
-Python es necesario para herramientas AI: LangChain, FastAPI, scripts
-de automatización. `uv` es el nuevo package manager de Python — escrito
-en Rust, reemplaza pip + venv + pyenv con un solo comando.
+Python needed for AI tools: LangChain, FastAPI, automation scripts.
+`uv` is the new Python package manager — written in Rust, replaces
+pip + venv + pyenv with single command.
 
 ```bash
-# Python 3 (viene preinstalado en Ubuntu 24.04, verificar versión)
+# Python 3 (preinstalled in Ubuntu 24.04, verify version)
 python3 --version
 
-# Instalar uv
+# Install uv
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Recargar PATH
+# Reload PATH
 source ~/.zshrc
 ```
 
 ```bash
-# Uso básico de uv (reemplaza python -m venv + pip)
-uv venv                          # crear entorno virtual
-uv pip install fastapi uvicorn   # instalar dependencias
-uv run python script.py          # ejecutar sin activar venv
+# Basic uv usage (replaces python -m venv + pip)
+uv venv                          # create virtual env
+uv pip install fastapi uvicorn   # install dependencies
+uv run python script.py          # run without activating venv
 ```
 
 Run `uv --version` and look for `uv 0.x.x` to verify.
 
----
+</details>
 
-## 18. Ollama — Modelos AI Locales (OPTIONAL)
+<details>
+<summary><b>18. Ollama — Local AI Models (OPTIONAL)</b></summary>
 
-**current as of 2026-05** | [NUEVO] Opcional — requiere hardware específico
+**current as of 2026-05** | [NEW] Optional — requires specific hardware
 
-⚠️ **REQUISITOS MÍNIMOS RECOMENDADOS antes de continuar:**
+⚠️ **MINIMUM RECOMMENDED REQUIREMENTS before continuing:**
 
-- RAM: 16 GB+ (32 GB recomendado para modelos 13B+)
-- GPU: NVIDIA con 8 GB VRAM+ para aceleración (o CPU-only, más lento)
-- Almacenamiento: 50 GB+ libre para modelos
+- RAM: 16 GB+ (32 GB recommended for 13B+ models)
+- GPU: NVIDIA with 8 GB VRAM+ for acceleration (or CPU-only, slower)
+- Storage: 50 GB+ free for models
 
-Si tu hardware no cumple esto, **omite esta sección completamente**.
-Las herramientas cloud de las secciones 9 y 13 son suficientes.
+If your hardware doesn't meet this, **skip this section entirely**.
+Cloud tools from sections 9 and 13 are sufficient.
 
 ```bash
-# Instalar Ollama
+# Install Ollama
 curl -fsSL https://ollama.com/install.sh | sh
 
-# Habilitar y verificar que el servicio esté corriendo
+# Enable and verify service running
 sudo systemctl enable --now ollama
 systemctl status ollama
 
-# Descargar modelos según hardware disponible
-ollama pull qwen2.5-coder:7b   # 4.7GB — excelente para código
-ollama pull phi4-mini           # 2.5GB — rápido, para hardware limitado
-ollama pull llama3.2:3b         # 2.0GB — propósito general, liviano
+# Download models based on available hardware
+ollama pull qwen2.5-coder:7b   # 4.7GB — excellent for code
+ollama pull phi4-mini           # 2.5GB — fast, for limited hardware
+ollama pull llama3.2:3b         # 2.0GB — general purpose, lightweight
 ```
 
-### Integración con OpenCode
+### OpenCode Integration
 
-En `~/.config/opencode/config.json`, agregar provider local:
+In `~/.config/opencode/config.json`, add local provider:
 
 ```json
 {
@@ -664,9 +786,9 @@ En `~/.config/opencode/config.json`, agregar provider local:
 }
 ```
 
-### Integración con Continue.dev (VS Code)
+### Continue.dev Integration (VS Code)
 
-En la extensión Continue, agregar en `~/.continue/config.json`:
+In Continue extension, add to `~/.continue/config.json`:
 
 ```json
 {
@@ -680,17 +802,18 @@ En la extensión Continue, agregar en `~/.continue/config.json`:
 
 Run `ollama list` and look for your downloaded models to verify.
 
----
+</details>
 
-## 19. Security Essentials
+<details>
+<summary><b>19. Security Essentials</b></summary>
 
 **current as of 2026-05**
 
-UFW como firewall básico y Bitwarden CLI para gestión de contraseñas
-desde terminal — útil para automatizaciones y scripts de desarrollo.
+UFW as basic firewall and Bitwarden CLI for password management
+from terminal — useful for automations and development scripts.
 
 ```bash
-# Habilitar firewall UFW
+# Enable UFW firewall
 sudo ufw enable
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
@@ -700,43 +823,45 @@ sudo ufw status verbose
 # Bitwarden CLI
 npm install -g @bitwarden/cli
 
-# Verificar
+# Verify
 bw --version
 ```
 
 Run `sudo ufw status` and look for `Status: active` to verify.
 
----
+</details>
 
-## 20. Other Apps to Consider
+<details>
+<summary><b>20. Other Apps to Consider</b></summary>
 
 **current as of 2026-05**
 
-Aplicaciones adicionales recomendadas para un entorno de desarrollo
-completo. Instalar según necesidad del proyecto.
+Additional recommended apps for a complete development environment.
+Install based on project needs.
 
 ```bash
-# Comunicación
-sudo apt install -y slack-desktop   # o via snap: sudo snap install slack
+# Communication
+sudo apt install -y slack-desktop  # or via snap: sudo snap install slack
 
-# Cliente API open source (reemplaza Postman)
+# Open source API client (replaces Postman)
 sudo snap install bruno
 
-# Gestión de notas (excelente para documentar contexto AI)
+# Note management (excellent for documenting AI context)
 sudo snap install obsidian --classic
 
 # Multimedia
 sudo apt install -y vlc
 
-# Monitoreo del sistema
-sudo apt install -y htop nvtop   # nvtop para monitorear GPU (útil con Ollama)
+# System monitoring
+sudo apt install -y htop nvtop  # nvtop for GPU monitoring (useful with Ollama)
 ```
 
----
+</details>
 
-## 21. Optional Runtimes
+<details>
+<summary><b>21. Optional Runtimes</b></summary>
 
-**current as of 2026-05** | Solo instalar si el proyecto lo requiere
+**current as of 2026-05** | Only install if project requires
 
 ```bash
 # Go 1.22+
@@ -745,36 +870,74 @@ sudo apt update
 sudo apt install -y golang-go
 go version
 
-# Rust (via rustup — método oficial)
+# Rust (via rustup — official method)
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source "$HOME/.cargo/env"
 rustc --version
 
-# Bun (runtime JS alternativo a Node, ultrarrápido)
+# Bun (JS runtime alternative to Node, ultra-fast)
 curl -fsSL https://bun.sh/install | bash
 bun --version
 ```
+
+</details>
+
+---
+
+## Diagnostic Tool
+
+Run the diagnostic to check installation status:
+
+```bash
+bash scripts/diagnostic.sh
+```
+
+This will check:
+- Shell status (ZSH active?)
+- Node.js / NPM / PNPM / NVM
+- OpenCode installation and config
+- API keys loaded
+- Fonts installed
+- Docker status
+- Python / uv
+- Optional tools
+
+---
+
+## Scripts Available
+
+| Script | Purpose | Dependencies |
+|--------|---------|--------------|
+| `diagnostic.sh` | Check installation status | None |
+| `install-base.sh` | Phase 1: OS + Shell + Fonts | None |
+| `install-node.sh` | Phase 2: Node + PNPM | ZSH active (after reboot) |
+| `install-opencode.sh` | Phase 3: OpenCode + keys | Node.js |
+| `install-tools.sh` | Phase 4: IDEs + Git + GH | None |
+| `install-docker.sh` | Phase 5: Docker + DBs | None |
+| `install-python.sh` | Phase 6: Python + uv | None |
+| `install-optional.sh` | Phase 7: Ollama + Apps | Hardware check |
+| `install-all.sh` | Master installer (interactive) | None |
 
 ---
 
 ## Credits
 
-Este repositorio es una evolución de
+This repository is an evolution of
 [Pop!_OS Setup Guide for Software Engineers](https://github.com/erik1066/pop-os-setup)
-por [@erik1066](https://github.com/erik1066).
+by [@erik1066](https://github.com/erik1066).
 
-### Colaboración humano-IA
+### Human-AI Collaboration
 
-La versión 2026 fue creada con el siguiente flujo colaborativo:
+The 2026 version was created with the following collaborative flow:
 
-- **Diseño, revisión y curaduría**: Elkin Cano Mogollón (humano)
-- **Generación de contenido técnico**: (Qwen3.5 Plus  + Sonnet 4.6) via [OpenCode](https://opencode.ai)
-- **Contexto base**: Experiencia acumulada en proyectos de software 2025-2026
-- **Validación de comandos**: Pop!_OS 24.04 LTS — COSMIC Desktop
+- **Design, review and curation**: Elkin Cano Mogollón (human)
+- **Technical content generation**: (Qwen3.5 Plus + Sonnet 4.6) via [OpenCode](https://opencode.ai)
+- **Base context**: Accumulated experience in software projects 2025-2026
+- **Command validation**: Pop!_OS 24.04 LTS — COSMIC Desktop
 
-> Los comandos han sido revisados para compatibilidad con Pop!_OS 24.04 LTS
-> (base Ubuntu 24.04, COSMIC Desktop, Wayland). Se recomienda verificar
-> la documentación oficial para versiones más recientes de cada herramienta.
+> Commands have been reviewed for compatibility with Pop!_OS 24.04 LTS
+> (Ubuntu 24.04 base, COSMIC Desktop, Wayland). Recommend checking
+> official documentation for newer versions of each tool.
 
 ---
 
